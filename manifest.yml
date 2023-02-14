@@ -1,0 +1,78 @@
+plugin:
+  name: custom-vzg-validationhub
+  version: 0.1
+  l10n: l10n/custom-vzg-validationhub.csv
+  displayname:
+    de-DE: VZG-Validierungszentrale
+    en-US: VZG-Validationhub
+  info:
+    de-DE: "Sendet Informationen an die zentrale Validierungszentrale der VZG."
+    en-US: "Sends information to the central validationhub of the VZG."
+  webfrontend:
+    url: custom-vzg-validationhub.js
+
+callbacks:
+  transition_db_pre_save:
+    sendtovalidation:
+      exec:
+        service: "node"
+        commands:
+          - prog: "node"
+            stdin:
+              type: body
+            stdout:
+              type: body
+            args:
+              - type: "value"
+                value: "%_exec.pluginDir%/build/server/validation.js"
+
+  db_pre_save:
+    steps:
+      - name: "test for 'validierungstest'"
+        callback: sendtovalidation
+    callbacks:
+      sendtovalidation:
+        exec:
+          service: "node"
+          commands:
+            - prog: "node"
+              stdin:
+                type: body
+              stdout:
+                type: body
+              args:
+                - type: "value"
+                  value: "%_exec.pluginDir%/build/server/validation.js"
+                #- type: "value"
+                #  value: "%info.json%"
+
+base_config:
+  - name: VZG-Validationhub
+    group: validationhub
+    parameters:
+      enable_validation:
+        type: bool
+        position: 1
+      enable_debugging:
+        type: bool
+        position: 2
+      instance_url:
+        type: text
+        position: 3
+      token:
+        type: text
+        position: 4
+      timeout:
+        type: int
+        position: 5
+      max_records_to_check_on_error:
+        type: int
+        position: 6
+      tagfilter_select:
+        type: tagfilter-select
+        position: 7
+      validation_selector:
+        type: text
+        plugin_type: validation-selector
+        store_as_json: true
+        position: 8

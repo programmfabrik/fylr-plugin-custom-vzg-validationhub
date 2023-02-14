@@ -1,0 +1,20 @@
+key,de-DE,en-US
+server.config.group.system.validationhub.introduction,Hier kann die externe Validierung über die VZG-Validierungszentrale aktiviert und konfiguriert werden.,
+server.config.name.system.VZG-Validationhub,Einstellungen,Configuration
+server.config.group.system.validationhub.title,VZG-Validierungszentrale,VZG-Validationhub
+server.config.parameter.system.VZG-Validationhub.enable_validation.label,Validierung aktivieren?,Enable validation?
+server.config.parameter.system.VZG-Validationhub.enable_validation.checkbox,Ja,Yes
+server.config.parameter.system.VZG-Validationhub.timeout.label,Timeout in Sekunden, Timeout in seconds
+server.config.parameter.system.VZG-Validationhub.contact.label,Kontakt (E-Mail), Contact (E-Mail)
+server.config.parameter.system.VZG-Validationhub.tag_select.label,Tags welche die Validierung auslösen,Tags which trigger the validation
+server.config.parameter.system.VZG-Validationhub.tagfilter_select.label,Tagfilter für Validierung,Tagfilter for validation
+server.config.parameter.system.VZG-Validationhub.instance_url.label,Url dieser Instanz,URL of this instance
+server.config.parameter.system.VZG-Validationhub.enable_debugging.label,Debugmodus (mehr Log),Debugmode (more logs)
+server.config.parameter.system.VZG-Validationhub.enable_debugging.checkbox, Aktivieren, Activate
+server.config.parameter.system.VZG-Validationhub.token.label,Geheimer Token,Secret token
+server.config.parameter.system.VZG-Validationhub.max_records_to_check_on_error.label,Maximale Anzahl an Datensätzen welche im Fehlerfall validiert werden,Maximal records to be validated in case of errors
+server.config.parameter.system.VZG-Validationhub.validation_selector.label,Selektor für Objekttypen ohne Tags,Selector for objecttypes without tags
+
+baseconfig.validation.selector.objecttype.label,Objekttyp,Objecttype
+baseconfig.validation.selector.validierung.label,Validierung,Validation
+baseconfig.validation.selector.validierung.activate.label,aktivieren,activate
