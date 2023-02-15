@@ -1,4 +1,7 @@
-var https = require('https');
+// make build; docker restart fylr; docker logs -f --tail 10 execserver
+
+const fs = require('fs');
+const https = require('https');
 
 let input = '';
 
@@ -36,8 +39,9 @@ function throwErrorToFrontend(error, description) {
 
 process.stdin.on('data', d => {
   try {
-    input += d.toString()
+    input += d.toString();
   } catch (e) {
+    //throwErrorToFrontend("Could not read input into string: ${e.message}", e.stack);
     console.error(`Could not read input into string: ${e.message}`, e.stack);
     process.exit(1);
   }
@@ -47,48 +51,49 @@ process.stdin.on('end', () => {
   let data;
   try {
     data = JSON.parse(input);
-
-    // make build; docker restart fylr; docker logs -f --tail 10 execserver
-
-    // read frontendLanguage from object's update-user
-    frontend_language = (data.objects[0] && data.objects[0]._current && data.objects[0]._current._create_user && data.objects[0]._current._create_user.user && data.objects[0]._current._create_user.user.frontend_language);
-
-    /////////////////////////////////////////
-    // read pluginconfig
-
-    // config: enabled validation
-    config_enable_validation = (data.info.config && data.info.config.plugin && data.info.config.plugin['custom-vzg-validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].enable_validation);
-    // config: instance-url
-    config_instanceurl = (data.info.config && data.info.config.plugin && data.info.config.plugin['custom-vzg-validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].instance_url);
-    // config: enable_debug
-    config_enable_debug = (data.info.config && data.info.config.plugin && data.info.config.plugin['custom-vzg-validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].enable_debugging);
-    // config: token
-    config_token = (data.info.config && data.info.config.plugin && data.info.config.plugin['custom-vzg-validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].token);
-    // config: timeout
-    config_timeout = (data.info.config && data.info.config.plugin && data.info.config.plugin['custom-vzg-validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].timeout);
-
-    // if validation not enabled => do nothing
-    if (!config_enable_validation) {
-      console.log(JSON.stringify(data, "", "    "));
-      process.exit(0);
-    }
-
-    // if no config_token given
-    if (!config_token) {
-      throwErrorToFrontend("Missing configuration for validation: token", '');
-    }
-
-    // if no config_instanceurl given
-    if (!config_instanceurl) {
-      throwErrorToFrontend("Missing configuration for validation: instanceURL", '');
+    if (!data.info) {
+      data.info = {}
     }
   } catch (e) {
     console.error(`Could not parse input: ${e.message}`, e.stack);
     process.exit(1);
   }
 
+  // read frontendLanguage from object's update-user
+  frontend_language = (data.objects[0] && data.objects[0]._current && data.objects[0]._current._create_user && data.objects[0]._current._create_user.user && data.objects[0]._current._create_user.user.frontend_language);
+
+  /////////////////////////////////////////
+  // read pluginconfig from baseconfig
+
+  // config: enabled validation
+  config_enable_validation = (data.info.config && data.info.config.plugin && data.info.config.plugin['custom-vzg-validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].enable_validation);
+  // config: instance-url
+  config_instanceurl = (data.info.config && data.info.config.plugin && data.info.config.plugin['custom-vzg-validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].instance_url);
+  // config: enable_debug
+  config_enable_debug = (data.info.config && data.info.config.plugin && data.info.config.plugin['custom-vzg-validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].enable_debugging);
+  // config: token
+  config_token = (data.info.config && data.info.config.plugin && data.info.config.plugin['custom-vzg-validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].token);
+  // config: timeout
+  config_timeout = (data.info.config && data.info.config.plugin && data.info.config.plugin['custom-vzg-validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].timeout);
+
+  // if validation not enabled in config => return ok and save
+  if (!config_enable_validation) {
+    console.log(JSON.stringify(data, "", "    "));
+    process.exit(0);
+  }
+
+  // if no config_token given
+  if (!config_token) {
+    throwErrorToFrontend("Missing configuration for validation: token", '');
+  }
+
+  // if no config_instanceurl given
+  if (!config_instanceurl) {
+    throwErrorToFrontend("Missing configuration for validation: instanceURL", '');
+  }
+
   ///////////////////////////////////////////////////
-  // Tagfilter-check
+  // Tagfilter-check (from pluginconfig)
   let tags_from_record = data.objects[0]._tags;
   let tagfilter_value = data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].tagfilter_select;
   config_tagfilter = tagfilter_value;
@@ -107,9 +112,8 @@ process.stdin.on('end', () => {
   }
 
   //////////////////////////////////////////////////////
-  // Objecttype-Filter
-
-  // only if not yet qualified by tagfilter
+  // Objecttype-Filter-check (from pluginconfig)
+  // -> only if not yet qualified by tagfilter
   if (!qualified_for_validation) {
     // get objecttype of object(s) in request
     let _objecttype = data.objects[0]._objecttype;
@@ -128,13 +132,15 @@ process.stdin.on('end', () => {
     }
   }
 
-  delete(data.info)
+  delete(data.info);
 
-  // if no selector matches -> return ok
+  // if no selector matches -> return ok and save
   if (!qualified_for_validation) {
     console.log(JSON.stringify(data, "", "    "));
     process.exit(0);
   }
+
+  // if record needs validation, send record to external fylr.validation-service
 
   let responseData = '';
 
@@ -147,9 +153,6 @@ process.stdin.on('end', () => {
     'objects': data.objects
   }
 
-  //console.error("dataToSend");
-  //console.error(JSON.stringify(dataToSend));
-
   const httpsOptions = {
     hostname: validationEndpointURL,
     port: 443,
@@ -158,7 +161,6 @@ process.stdin.on('end', () => {
     timeout: config_timeout * 1000,
     headers: {
       'Content-Type': 'application/json'
-      //'Content-Length': JSON.stringify(dataToSend).length
     }
   };
 
