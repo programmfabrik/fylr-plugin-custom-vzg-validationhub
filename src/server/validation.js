@@ -212,18 +212,14 @@ process.stdin.on('end', () => {
         }
         // validation errors
         if (validationResponse.length) {
-          // TODO TEST GRUPPENEDITOR????
-          // TODO TEST GRUPPENEDITOR????
-          // TODO TEST GRUPPENEDITOR????
-          // TODO TEST GRUPPENEDITOR????
-          // TODO TEST GRUPPENEDITOR????
-
           var errors = [];
 
           validationResponse.forEach((validationResponseForOneObject) => {
-            validationResponseForOneObject.forEach((errorObject) => {
-              errors.push(' • ' + errorObject.message + ' (\"' + errorObject.position.jsonpointer + '\")');
-            });
+            if (validationResponseForOneObject) {
+              validationResponseForOneObject.forEach((errorObject) => {
+                errors.push(' • ' + errorObject.message + ' (\"' + errorObject.position.jsonpointer + '\")');
+              });
+            }
           });
           var errorDescriptionAsText = '\n' + errors.join('\n\n');
           throwErrorToFrontend("Fehler in der Validierung des Datensatzes", errorDescriptionAsText);
