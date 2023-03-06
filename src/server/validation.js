@@ -2,6 +2,9 @@
 
 const fs = require('fs');
 const https = require('https');
+const zlib = require('zlib');
+
+const MAX_CHUNK_SIZE = 10000;
 
 let input = '';
 
@@ -21,6 +24,18 @@ let config_tagfilter = {
 let qualified_for_validation = false;
 
 const validationEndpointURL = 'fylr.validierung.gbv.de';
+
+// logs a long string in parts
+function logLongString(longString) {
+  let chunks = [];
+  for (let i = 0; i < longString.length; i += MAX_CHUNK_SIZE) {
+    chunks.push(longString.substring(i, i + MAX_CHUNK_SIZE));
+  }
+
+  for (let i = 0; i < chunks.length; i++) {
+    process.stdout.write(chunks[i]);
+  }
+}
 
 // throws api-error to frontend
 function throwErrorToFrontend(error, description) {
@@ -49,11 +64,13 @@ process.stdin.on('data', d => {
 
 process.stdin.on('end', () => {
   let data;
+  let dataString;
   try {
     data = JSON.parse(input);
     if (!data.info) {
       data.info = {}
     }
+    dataString = JSON.stringify(data);
   } catch (e) {
     console.error(`Could not parse input: ${e.message}`, e.stack);
     process.exit(1);
@@ -132,7 +149,13 @@ process.stdin.on('end', () => {
     }
   }
 
+  // delete some not needed information (make it smaller for transfer = quicker)
   delete(data.info);
+  data.objects.forEach(function(element) {
+    delete element._current;
+    delete element._owner;
+    delete element._standard;
+  });
 
   // if no selector matches -> return ok and save
   if (!qualified_for_validation) {
@@ -141,17 +164,20 @@ process.stdin.on('end', () => {
   }
 
   // if record needs validation, send record to external fylr.validation-service
-
   let responseData = '';
 
   // prepare data to send
-  dataToSend = {
+  let dataToSend = {
     'referer': config_instanceurl,
     'debug': config_enable_debug,
     'token': config_token,
     'frontend_language': frontend_language,
     'objects': data.objects
   }
+
+  // zip content, otherwise its maybe too large for POST
+  let zippedDataToSend = JSON.stringify(dataToSend);
+  zippedDataToSend = zlib.gzipSync(zippedDataToSend);
 
   const httpsOptions = {
     hostname: validationEndpointURL,
@@ -179,7 +205,8 @@ process.stdin.on('end', () => {
         // validation fine
         if (validationResponse[0]) {
           if (validationResponse[0] == true) {
-            console.log(JSON.stringify(data, "", "    "));
+            let originalDataString = JSON.stringify(data);
+            logLongString(originalDataString);
             process.exit(0);
           }
         }
@@ -202,6 +229,7 @@ process.stdin.on('end', () => {
           throwErrorToFrontend("Fehler in der Validierung des Datensatzes", errorDescriptionAsText);
         }
       }
+      return;
     });
   });
   request.on('timeout', () => {
@@ -213,6 +241,6 @@ process.stdin.on('end', () => {
     throwErrorToFrontend("Problem mit Anfrage an den Validierungsdienst!", '');
   });
 
-  request.write(JSON.stringify(dataToSend));
+  request.write(zippedDataToSend);
   request.end();
 });
