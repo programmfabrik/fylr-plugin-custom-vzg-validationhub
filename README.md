@@ -13,4 +13,4 @@ All information about usage, configuration etc. can be found in the documentatio
 
 ## sources
 
-The source code of this plugin is managed in a git repository at <https://github.com/programmfabrik/custom-vzg-validationhub>.
+The source code of this plugin is managed in a git repository at <https://github.com/programmfabrik/fylr-plugin-custom-vzg-validationhub>.
