@@ -26,7 +26,7 @@ callbacks:
               type: body
             args:
               - type: "value"
-                value: "%_exec.pluginDir%/build/server/validation.js"
+                value: "%_exec.pluginDir%/server/validation.js"
 
   db_pre_save:
     steps:
@@ -44,7 +44,7 @@ callbacks:
                 type: body
               args:
                 - type: "value"
-                  value: "%_exec.pluginDir%/build/server/validation.js"
+                  value: "%_exec.pluginDir%/server/validation.js"
                 #- type: "value"
                 #  value: "%info.json%"
 

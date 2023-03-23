@@ -16,12 +16,15 @@ build: clean ## build plugin
 	mkdir -p build/$(PLUGIN_NAME)
 	mkdir -p build/$(PLUGIN_NAME)/webfrontend
 	mkdir -p build/$(PLUGIN_NAME)/l10n
+	mkdir -p build/$(PLUGIN_NAME)/server
 
 	mkdir -p src/tmp # build code from coffee
 	cp src/webfrontend/*.coffee src/tmp
 	cd src/tmp && coffee -b --compile ${COFFEE_FILES} # bare-parameter is obligatory!
 	cat src/tmp/*.js > build/$(PLUGIN_NAME)/webfrontend/custom-vzg-validationhub.js
 	rm -rf src/tmp # clean tmp
+
+	cp src/server/validation.js build/$(PLUGIN_NAME)/server/validation.js
 
 	cp l10n/custom-vzg-validationhub.csv build/$(PLUGIN_NAME)/l10n/custom-vzg-validationhub.csv # copy l10n
 
