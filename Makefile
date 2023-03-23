@@ -1,32 +1,34 @@
+ZIP_NAME ?= "customVZGValidationHub.zip"
 PLUGIN_NAME = custom-vzg-validationhub
 
-L10N_FILES = l10n/$(PLUGIN_NAME).csv
-
-#ZIP_NAME ?= custom-vzg-validationhub.zip
-
-BUILD_DIR = build
-
+# coffescript-files to compile
 COFFEE_FILES = \
-	src/webfrontend/ValidationSelectorBaseConfig.coffee
+	ValidationSelectorBaseConfig.coffee
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-all: build
+all: build zip ## build and zip
 
-include easydb-library/tools/base-plugins.make
+build: clean ## build plugin
 
-build: clean code buildinfojson
-		mkdir -p build
-		cp -r l10n build
-		mkdir -p build/server
-		cp -r src/server/validation.js build/server
-		cp build-info.json build/build-info.json
+	mkdir -p build
+	mkdir -p build/$(PLUGIN_NAME)
+	mkdir -p build/$(PLUGIN_NAME)/webfrontend
+	mkdir -p build/$(PLUGIN_NAME)/l10n
 
-code: $(JS) $(JS_SERVER)
+	mkdir -p src/tmp # build code from coffee
+	cp src/webfrontend/*.coffee src/tmp
+	cd src/tmp && coffee -b --compile ${COFFEE_FILES} # bare-parameter is obligatory!
+	cat src/tmp/*.js > build/$(PLUGIN_NAME)/webfrontend/custom-vzg-validationhub.js
+	rm -rf src/tmp # clean tmp
 
-clean: ##clean
+	cp l10n/custom-vzg-validationhub.csv build/$(PLUGIN_NAME)/l10n/custom-vzg-validationhub.csv # copy l10n
+
+	cp manifest.master.yml build/$(PLUGIN_NAME)/manifest.yml # copy manifest
+
+clean: ## clean
 				rm -rf build
 
-#zip: build
-#  cd build && zip ${ZIP_NAME} -r $(PLUGIN_NAME)/
+zip: build ## zip file
+			cd build && zip ${ZIP_NAME} -r $(PLUGIN_NAME)/
