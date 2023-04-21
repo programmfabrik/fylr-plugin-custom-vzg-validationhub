@@ -27,6 +27,8 @@ callbacks:
             args:
               - type: "value"
                 value: "%_exec.pluginDir%/server/validation.js"
+              - type: "value"
+                value: "%info.json%"
 
   db_pre_save:
     steps:
@@ -45,8 +47,8 @@ callbacks:
               args:
                 - type: "value"
                   value: "%_exec.pluginDir%/server/validation.js"
-                #- type: "value"
-                #  value: "%info.json%"
+                - type: "value"
+                  value: "%info.json%"
 
 base_config:
   - name: VZG-Validationhub
