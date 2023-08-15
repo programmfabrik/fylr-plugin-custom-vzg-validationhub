@@ -52,6 +52,11 @@ function throwErrorToFrontend(error, description) {
   process.exit(0);
 }
 
+///////////////////////////////////////
+///////////////////////////////////////
+///////////////////////////////////////
+///////////////////////////////////////
+
 process.stdin.on('data', d => {
   try {
     input += d.toString();
@@ -82,21 +87,9 @@ process.stdin.on('end', () => {
   /////////////////////////////////////////
   // read pluginconfig from baseconfig
 
+  // original mask
+  original_mask = (data.objects && data.objects[0] && data.objects[0]._callback_context && data.objects[0]._callback_context.original_mask);
   // config: enabled validation
-
-  var string = JSON.stringify(data);
-
-
-
-  //console.error(JSON.stringify(Object.keys(data.info)));
-  //console.error(JSON.stringify(Object.keys(data.info.api_url)));
-  //console.error(JSON.stringify(Object.keys(data.info.config)));
-  //console.error(JSON.stringify(Object.keys(data.info.request)));
-  //console.error(JSON.stringify(data.info.request)); --> neiN!
-  //console.error(JSON.stringify(data.info.api_url));
-
-  //console.error(JSON.stringify(data.info));
-
   config_enable_validation = (data.info.config && data.info.config.plugin && data.info.config.plugin['custom-vzg-validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].enable_validation);
   // config: instance-url
   config_instanceurl = (data.info.config && data.info.config.plugin && data.info.config.plugin['custom-vzg-validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].instance_url);
@@ -109,7 +102,6 @@ process.stdin.on('end', () => {
 
   // if validation not enabled in config => return ok and save
   if (!config_enable_validation) {
-    //console.log(JSON.stringify(data, "", "    "));
     logLongString(JSON.stringify(data, "", "    "));
     process.exit(0);
   }
@@ -139,8 +131,6 @@ process.stdin.on('end', () => {
     qualified_for_validation = config_tagfilter.all.every(all => tag_ids.includes(all));
   } else if (config_tagfilter.not) {
     qualified_for_validation = !config_tagfilter.not.some(not => tag_ids.includes(not));
-  } else {
-    qualified_for_validation = true;
   }
 
   //////////////////////////////////////////////////////
@@ -165,9 +155,7 @@ process.stdin.on('end', () => {
   }
 
   // delete some not needed information (make it smaller for transfer = quicker)
-  //console.error(JSON.stringify(data.info));
   delete(data.info);
-  //console.error(JSON.stringify(data.objects));
   data.objects.forEach(function(element) {
     delete element._current;
     delete element._owner;
@@ -190,7 +178,8 @@ process.stdin.on('end', () => {
     'debug': config_enable_debug,
     'token': config_token,
     'frontend_language': frontend_language,
-    'objects': data.objects
+    'objects': data.objects,
+    'original_mask': original_mask
   }
 
   // zip content, otherwise its maybe too large for POST

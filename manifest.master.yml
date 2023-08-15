@@ -6,7 +6,7 @@ plugin:
     de-DE: VZG-Validierungszentrale
     en-US: VZG-Validationhub
   info:
-    de-DE: "Sendet Informationen an die zentrale Validierungszentrale der VZG."
+    de-DE: "Sendet Informationen an den zentralen Validierungsdienst der VZG."
     en-US: "Sends information to the central validationhub of the VZG."
   webfrontend:
     url: custom-vzg-validationhub.js
@@ -27,8 +27,6 @@ callbacks:
             args:
               - type: "value"
                 value: "%_exec.pluginDir%/server/validation.js"
-              - type: "value"
-                value: "%info.json%"
 
   db_pre_save:
     steps:
