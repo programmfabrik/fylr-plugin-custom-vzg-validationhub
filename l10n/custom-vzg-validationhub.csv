@@ -4,7 +4,12 @@ server.config.name.system.VZG-Validationhub,Einstellungen,Configuration
 server.config.group.system.validationhub.title,VZG-Validierungszentrale,VZG-Validationhub
 server.config.parameter.system.VZG-Validationhub.enable_validation.label,Validierung aktivieren?,Enable validation?
 server.config.parameter.system.VZG-Validationhub.enable_validation.checkbox,Ja,Yes
+
 server.config.parameter.system.VZG-Validationhub.timeout.label,Timeout in Sekunden, Timeout in seconds
+
+server.config.parameter.system.VZG-Validationhub.resolve_on_timeout.label,Bei Timeout speichern erlauben?,Allow save on timeout?
+server.config.parameter.system.VZG-Validationhub.resolve_on_timeout.checkbox,Ja,yes
+
 server.config.parameter.system.VZG-Validationhub.contact.label,Kontakt (E-Mail), Contact (E-Mail)
 server.config.parameter.system.VZG-Validationhub.tag_select.label,Tags welche die Validierung auslösen,Tags which trigger the validation
 server.config.parameter.system.VZG-Validationhub.tagfilter_select.label,Tagfilter für Validierung,Tagfilter for validation

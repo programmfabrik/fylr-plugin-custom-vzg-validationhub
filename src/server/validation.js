@@ -99,6 +99,8 @@ process.stdin.on('end', () => {
   config_token = (data.info.config && data.info.config.plugin && data.info.config.plugin['custom-vzg-validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].token);
   // config: timeout
   config_timeout = (data.info.config && data.info.config.plugin && data.info.config.plugin['custom-vzg-validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].timeout);
+  // save on timeout?
+  config_save_on_timeout = (data.info.config && data.info.config.plugin && data.info.config.plugin['custom-vzg-validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].resolve_on_timeout);
 
   // if validation not enabled in config => return ok and save
   if (!config_enable_validation) {
@@ -236,7 +238,13 @@ process.stdin.on('end', () => {
     });
   });
   request.on('timeout', () => {
-    throwErrorToFrontend("Timeout bei der Anfrage an den Validierungsdienst!", '');
+    if (config_save_on_timeout) {
+      let originalDataString = JSON.stringify(data);
+      logLongString(originalDataString);
+      process.exit(0);
+    } else {
+      throwErrorToFrontend("Timeout bei der Anfrage an den Validierungsdienst!", '');
+    }
     request.destroy();
   });
 

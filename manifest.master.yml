@@ -67,14 +67,17 @@ base_config:
       timeout:
         type: int
         position: 5
+      resolve_on_timeout:
+        type: bool
+        position: 6
       max_records_to_check_on_error:
         type: int
-        position: 6
+        position: 7
       tagfilter_select:
         type: tagfilter-select
-        position: 7
+        position: 8
       validation_selector:
         type: text
         plugin_type: validation-selector
         store_as_json: true
-        position: 8
+        position: 9
