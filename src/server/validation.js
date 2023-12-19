@@ -1,4 +1,4 @@
-// make build; docker restart fylr; docker logs -f --tail 10 execserver
+// make build; docker restart fylr; docker logs -f --tail 10 fylr
 
 const fs = require('fs');
 const https = require('https');
@@ -26,29 +26,80 @@ let qualified_for_validation = false;
 const validationEndpointURL = 'fylr.validierung.gbv.de';
 
 // logs a long string in parts
-function logLongString(longString) {
+function logLongString(longString, callback) {
   let chunks = [];
+  // Break the long string into chunks
   for (let i = 0; i < longString.length; i += MAX_CHUNK_SIZE) {
     chunks.push(longString.substring(i, i + MAX_CHUNK_SIZE));
   }
 
-  for (let i = 0; i < chunks.length; i++) {
-    process.stdout.write(chunks[i]);
+  function writeNextChunk(index) {
+    // Check if there are more chunks to write
+    if (index < chunks.length) {
+      // Write the current chunk and invoke the callback when done
+      process.stdout.write(chunks[index], () => {
+        // Callback to write the next chunk when the current one is complete
+        writeNextChunk(index + 1);
+      });
+    } else {
+      // All chunks have been written, invoke the final callback
+      callback();
+    }
   }
+
+  // Start writing the first chunk
+  writeNextChunk(0);
 }
 
+/*
+ERROR-Example
+{
+    "code": "validation.plugin.error",
+    "error": "Server Validation Error, see editor for details",
+    "package": "",
+    "parameters": {
+        "problems": [
+            [
+                {
+                    "field": "validation_errors.field_list[0].subfield_1",
+                    "message": "This is a dummy error message for subfield_1 with value Foo, we only accept empty values here...",
+                },
+                {
+                    "field": "validation_errors.field_list[0].subfield_2",
+                    "message": "This is a dummy error message for subfield_2 with value Foo, we only accept empty values here...",
+                },
+                {
+                    "field": "validation_errors.field_list[]",
+                    "message": "This is a dummy error message for field_list[] with value [object Object], we only accept empty values here...",
+                },
+                {
+                    "field": "validation_errors.name",
+                    "message": "This is a dummy error message for name with value Foo, we only accept empty values here...",
+                }
+            ]
+        ]
+    },
+    "realm": "api",
+    "statuscode": 400
+}
+*/
+
 // throws api-error to frontend
-function throwErrorToFrontend(error, description) {
-  console.log(JSON.stringify({
+function throwErrorToFrontend(error, description, problems = []) {
+  var result = JSON.stringify({
     "error": {
-      "code": "error.validation",
+      "code": "validation.plugin.error",
       "statuscode": 400,
       "realm": "api",
       "error": error,
-      "parameters": {},
+      "package": "",
+      "parameters": {
+        'problems': [problems]
+      },
       "description": description
     }
-  }));
+  })
+  console.log(result);
   process.exit(0);
 }
 
@@ -61,7 +112,6 @@ process.stdin.on('data', d => {
   try {
     input += d.toString();
   } catch (e) {
-    //throwErrorToFrontend("Could not read input into string: ${e.message}", e.stack);
     console.error(`Could not read input into string: ${e.message}`, e.stack);
     process.exit(1);
   }
@@ -102,156 +152,175 @@ process.stdin.on('end', () => {
   // save on timeout?
   config_save_on_timeout = (data.info.config && data.info.config.plugin && data.info.config.plugin['custom-vzg-validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].resolve_on_timeout);
 
-  // if validation not enabled in config => return ok and save
+  // if validation IS NOT ENABLED in config => return ok and save
   if (!config_enable_validation) {
-    logLongString(JSON.stringify(data, "", "    "));
-    process.exit(0);
-  }
-
-  // if no config_token given
-  if (!config_token) {
-    throwErrorToFrontend("Missing configuration for validation: token", '');
-  }
-
-  // if no config_instanceurl given
-  if (!config_instanceurl) {
-    throwErrorToFrontend("Missing configuration for validation: instanceURL", '');
-  }
-
-  ///////////////////////////////////////////////////
-  // Tagfilter-check (from pluginconfig)
-  let tags_from_record = data.objects[0]._tags;
-  let tagfilter_value = data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].tagfilter_select;
-  config_tagfilter = tagfilter_value;
-  qualified_for_validation = false;
-
-  const tag_ids = (tags_from_record || []).map(tag => tag._id);
-
-  if (config_tagfilter.any && config_tagfilter.any.length > 0) {
-    qualified_for_validation = config_tagfilter.any.some(any => tag_ids.includes(any));
-  } else if (config_tagfilter.all) {
-    qualified_for_validation = config_tagfilter.all.every(all => tag_ids.includes(all));
-  } else if (config_tagfilter.not) {
-    qualified_for_validation = !config_tagfilter.not.some(not => tag_ids.includes(not));
-  }
-
-  //////////////////////////////////////////////////////
-  // Objecttype-Filter-check (from pluginconfig)
-  // -> only if not yet qualified by tagfilter
-  if (!qualified_for_validation) {
-    // get objecttype of object(s) in request
-    let _objecttype = data.objects[0]._objecttype;
-    // check objecttype vs. selector
-    config_objecttype_selector = (data.info.config && data.info.config.plugin && data.info.config.plugin['custom-vzg-validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].validation_selector && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].validation_selector);
-    if (config_objecttype_selector) {
-      config_objecttype_selector = JSON.parse(config_objecttype_selector);
-      if (config_objecttype_selector.data_table)
-        if (Array.isArray(config_objecttype_selector.data_table)) {
-          config_objecttype_selector.data_table.forEach((entry) => {
-            if (entry.activate == true && entry.objecttype == _objecttype) {
-              qualified_for_validation = true;
-            }
-          });
-        }
-    }
-  }
-
-  // delete some not needed information (make it smaller for transfer = quicker)
-  delete(data.info);
-  data.objects.forEach(function(element) {
-    delete element._current;
-    delete element._owner;
-    delete element._standard;
-  });
-
-  // if no selector matches -> return ok and save
-  if (!qualified_for_validation) {
-    //console.log(JSON.stringify(data, "", "    "));
-    logLongString(JSON.stringify(data, "", "    "));
-    process.exit(0);
-  }
-
-  // if record needs validation, send record to external fylr.validation-service
-  let responseData = '';
-
-  // prepare data to send
-  let dataToSend = {
-    'referer': config_instanceurl,
-    'debug': config_enable_debug,
-    'token': config_token,
-    'frontend_language': frontend_language,
-    'objects': data.objects,
-    'original_mask': original_mask
-  }
-
-  // zip content, otherwise its maybe too large for POST
-  let zippedDataToSend = JSON.stringify(dataToSend);
-  zippedDataToSend = zlib.gzipSync(zippedDataToSend);
-
-  const httpsOptions = {
-    hostname: validationEndpointURL,
-    port: 443,
-    path: '/',
-    method: 'POST',
-    timeout: config_timeout * 1000,
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  };
-
-  const request = https.request(httpsOptions, (response) => {
-    response.on('data', (chunk) => {
-      responseData += chunk;
-    });
-    response.on('end', () => {
-      var validationResponse = JSON.parse(responseData);
-      if (typeof validationResponse == 'object') {
-        // validation error?
-        if (validationResponse.error) {
-          var errorMessage = 'Die Validierung ist nicht korrekt konfiguriert. Ticketnr. für den Support:';
-          throwErrorToFrontend("Fehler bei der Validierung des Datensatzes", "\nMelden Sie die Ticketnummer \n#" + validationResponse['request-id'] + "\nan Ihren fylr-Administrator um Hilfe zu erhalten.");
-        }
-        // validation fine
-        if (validationResponse[0]) {
-          if (validationResponse[0] == true) {
-            let originalDataString = JSON.stringify(data);
-            logLongString(originalDataString);
-            process.exit(0);
-          }
-        }
-        // validation errors
-        if (validationResponse.length) {
-          var errors = [];
-
-          validationResponse.forEach((validationResponseForOneObject) => {
-            if (validationResponseForOneObject) {
-              validationResponseForOneObject.forEach((errorObject) => {
-                errors.push(' • ' + errorObject.message + ' (\"' + errorObject.position.jsonpointer + '\")');
-              });
-            }
-          });
-          var errorDescriptionAsText = '\n' + errors.join('\n\n');
-          throwErrorToFrontend("Fehler in der Validierung des Datensatzes", errorDescriptionAsText);
-        }
-      }
-      return;
-    });
-  });
-  request.on('timeout', () => {
-    if (config_save_on_timeout) {
-      let originalDataString = JSON.stringify(data);
-      logLongString(originalDataString);
+    logLongString(JSON.stringify(data), () => {
       process.exit(0);
-    } else {
-      throwErrorToFrontend("Timeout bei der Anfrage an den Validierungsdienst!", '');
+    });
+  }
+
+  // if validation IS ENABLED in config => return ok and save
+  else if (config_enable_validation) {
+    // if no config_token given
+    if (!config_token) {
+      throwErrorToFrontend("Missing configuration for validation: token", '');
     }
-    request.destroy();
-  });
 
-  request.on('error', (e) => {
-    throwErrorToFrontend("Problem mit Anfrage an den Validierungsdienst!", '');
-  });
+    // if no config_instanceurl given
+    if (!config_instanceurl) {
+      throwErrorToFrontend("Missing configuration for validation: instanceURL", '');
+    }
 
-  request.write(zippedDataToSend);
-  request.end();
+    ///////////////////////////////////////////////////
+    // Tagfilter-check (from pluginconfig)
+    let tags_from_record = data.objects[0]._tags;
+    let tagfilter_value = data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].tagfilter_select;
+    config_tagfilter = tagfilter_value;
+    qualified_for_validation = false;
+
+    const tag_ids = (tags_from_record || []).map(tag => tag._id);
+
+    if (config_tagfilter.any && config_tagfilter.any.length > 0) {
+      qualified_for_validation = config_tagfilter.any.some(any => tag_ids.includes(any));
+    } else if (config_tagfilter.all) {
+      qualified_for_validation = config_tagfilter.all.every(all => tag_ids.includes(all));
+    } else if (config_tagfilter.not) {
+      qualified_for_validation = !config_tagfilter.not.some(not => tag_ids.includes(not));
+    }
+
+    //////////////////////////////////////////////////////
+    // Objecttype-Filter-check (from pluginconfig)
+    // -> only if not yet qualified by tagfilter
+    if (!qualified_for_validation) {
+      // get objecttype of object(s) in request
+      let _objecttype = data.objects[0]._objecttype;
+      // check objecttype vs. selector
+      config_objecttype_selector = (data.info.config && data.info.config.plugin && data.info.config.plugin['custom-vzg-validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'] && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].validation_selector && data.info.config.plugin['custom-vzg-validationhub'].config['VZG-Validationhub'].validation_selector);
+      if (config_objecttype_selector) {
+        config_objecttype_selector = JSON.parse(config_objecttype_selector);
+        if (config_objecttype_selector.data_table)
+          if (Array.isArray(config_objecttype_selector.data_table)) {
+            config_objecttype_selector.data_table.forEach((entry) => {
+              if (entry.activate == true && entry.objecttype == _objecttype) {
+                qualified_for_validation = true;
+              }
+            });
+          }
+      }
+    }
+
+    // delete some not needed information (make it smaller for transfer = quicker)
+    delete(data.info);
+    data.objects.forEach(function(element) {
+      delete element._current;
+      delete element._owner;
+      delete element._standard;
+    });
+
+    // if no selector matches -> return data and save
+    if (!qualified_for_validation) {
+      logLongString(JSON.stringify(data), () => {
+        process.exit(0);
+      });
+    } else if (qualified_for_validation) {
+      // if record needs validation, send record to external fylr.validation-service
+      let responseData = '';
+
+      // prepare data to send
+      let dataToSend = {
+        'referer': config_instanceurl,
+        'debug': config_enable_debug,
+        'token': config_token,
+        'frontend_language': frontend_language,
+        'objects': data.objects,
+        'original_mask': original_mask
+      }
+
+      // zip content, otherwise its maybe too large for POST
+      let zippedDataToSend = JSON.stringify(dataToSend);
+      zippedDataToSend = zlib.gzipSync(zippedDataToSend);
+
+      const httpsOptions = {
+        hostname: validationEndpointURL,
+        port: 443,
+        path: '/',
+        method: 'POST',
+        timeout: config_timeout * 1000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+
+      const request = https.request(httpsOptions, (response) => {
+        response.on('data', (chunk) => {
+          responseData += chunk;
+        });
+        response.on('end', () => {
+          var validationResponse = JSON.parse(responseData);
+          if (typeof validationResponse == 'object') {
+            // validation error?
+            if (validationResponse.error) {
+              var errorMessage = 'Die Validierung ist nicht korrekt konfiguriert. Ticketnr. für den Support:';
+              throwErrorToFrontend("Fehler bei der Validierung des Datensatzes", "\nMelden Sie die Ticketnummer \n#" + validationResponse['request-id'] + "\nan Ihren fylr-Administrator um Hilfe zu erhalten.");
+            }
+            let validationIsFine = false;
+            // validation fine
+            if (validationResponse[0]) {
+              if (validationResponse[0] == true) {
+                validationIsFine = true;
+                let originalDataString = JSON.stringify(data);
+                logLongString(JSON.stringify(data), () => {
+                  process.exit(0);
+                });
+              }
+            }
+            // validation errors
+            if (validationResponse.length > 0 && validationIsFine == false) {
+              var errors = [];
+              var problems = [];
+              validationResponse.forEach((validationResponseForOneObject) => {
+                if (validationResponseForOneObject) {
+                  validationResponseForOneObject.forEach((errorObject) => {
+                    errors.push(' • ' + errorObject.message + ' (\"' + errorObject.position.jsonpointer + '\")');
+                    var pointerString = errorObject.position.jsonpointer;
+                    // Wenn der erste Buchstabe ein Schrägstrich ("/") ist, entferne ihn
+                    if (pointerString[0] === '/') {
+                      pointerString = pointerString.slice(1);
+                    }
+                    // Außerdem ersetze alle Schrägstriche ("/") durch Punkte (".")
+                    pointerString = pointerString.replace(/\//g, ".");
+                    problems.push({
+                      field: pointerString,
+                      message: errorObject.message
+                    });
+                  });
+                }
+              });
+              var errorDescriptionAsText = '\n' + errors.join('\n\n');
+              throwErrorToFrontend("Fehler in der Validierung des Datensatzes", errorDescriptionAsText, problems);
+            }
+          }
+          return;
+        });
+      });
+      request.on('timeout', () => {
+        if (config_save_on_timeout) {
+          let originalDataString = JSON.stringify(data);
+          logLongString(JSON.stringify(data), () => {
+            process.exit(0);
+          });
+        } else {
+          throwErrorToFrontend("Timeout bei der Anfrage an den Validierungsdienst!", '');
+        }
+        request.destroy();
+      });
+
+      request.on('error', (e) => {
+        throwErrorToFrontend("Problem mit Anfrage an den Validierungsdienst!", '');
+      });
+
+      request.write(zippedDataToSend);
+      request.end();
+    }
+  }
 });
