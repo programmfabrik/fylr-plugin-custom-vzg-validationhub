@@ -19,6 +19,8 @@ server.config.parameter.system.VZG-Validationhub.enable_debugging.checkbox, Akti
 server.config.parameter.system.VZG-Validationhub.token.label,Geheimer Token,Secret token
 server.config.parameter.system.VZG-Validationhub.max_records_to_check_on_error.label,Maximale Anzahl an Datensätzen welche im Fehlerfall validiert werden,Maximal records to be validated in case of errors
 server.config.parameter.system.VZG-Validationhub.validation_selector.label,Selektor für Objekttypen ohne Tags,Selector for objecttypes without tags
+server.config.parameter.system.VZG-Validationhub.send_l10n.label,Übersetzungen des Datenmodells senden?,Send schema-translations?
+server.config.parameter.system.VZG-Validationhub.send_l10n.checkbox,Ja,yes
 
 baseconfig.validation.selector.objecttype.label,Objekttyp,Objecttype
 baseconfig.validation.selector.validierung.label,Validierung,Validation
