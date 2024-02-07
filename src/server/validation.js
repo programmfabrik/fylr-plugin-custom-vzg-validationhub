@@ -107,8 +107,8 @@ function normalizePointerPath(originalPath) {
 
     // if slashes are found - do normalization
     if (originalPath.indexOf("/") !== -1) {
-        // edit "/multi/2/field1" -->"/multi[2]field1"
-        normalizedPath = normalizedPath.replace(/\/(\d+)\//g, "[$1]");
+        //normalizedPath = normalizedPath.replace(/\/(\d+)\//g, "[$1]");
+        normalizedPath = normalizedPath.replace(/\/(\d+)(?=\/|$)/g, "[$1]");
         // replace all slashes with dots
         normalizedPath = normalizedPath.replace(/\//g, ".");
         // remove first dot, if given
@@ -119,8 +119,25 @@ function normalizePointerPath(originalPath) {
         normalizedPath = normalizedPath.replace(/_nested:/g, "");
 
     } else {
-        // if no slash is found, it is already fylr-syntax
+        // if no slash is found it is already fylr-syntax
     }
+
+    // Split the path into segments
+    let segments = normalizedPath.split(".");
+    
+    // iterate through each segment and replace "__" with "."
+    for (let i = 0; i < segments.length; i++) {
+      parts = segments[i].split('__');
+      for (let j = 0; j < parts.length; j++) {
+      	 for (let k = 1; k < segments.length; k++) {
+         	if(segments[k].startsWith(parts[j] + '__')) {
+            segments[k] = segments[k].slice(parts[j].length + 2);
+          }
+         } 
+      }
+    }
+    
+    normalizedPath = segments.join('.');
 
     return normalizedPath;
 }
