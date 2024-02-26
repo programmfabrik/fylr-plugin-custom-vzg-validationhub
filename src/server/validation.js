@@ -164,7 +164,10 @@ function translateFieldsInMessages(message) {
 }
 
 // throws api-error to frontend
-function throwErrorToFrontend(error, description, problems = []) {
+function throwErrorToFrontend(error = '', description = '', problems = []) {
+    if(! error || error == '') {
+        error = "Server Validation Error, see editor for details";
+    }
     var result = JSON.stringify({
         "error": {
             "code": "validation.plugin.error",
@@ -173,11 +176,11 @@ function throwErrorToFrontend(error, description, problems = []) {
             "error": error,
             "package": "",
             "parameters": {
-                'problems': [problems]
+                'problems': problems
             },
             "description": description
         }
-    })
+    });
     console.log(result);
     process.exit(0);
 }
@@ -221,8 +224,6 @@ process.stdin.on('end', async () => {
         const response = await fetch(apiUrl);
 
         if (!response.ok) {
-            // TODO TODO TODO
-            // TODO TODO TODO
             throw new Error(`Fehler beim Laden der Daten. Statuscode: ${response.status}`);
         }
 
@@ -255,6 +256,8 @@ process.stdin.on('end', async () => {
         config_timeout = data?.info?.config?.plugin['custom-vzg-validationhub']?.config['VZG-Validationhub']?.timeout;
         // save on timeout?
         config_save_on_timeout = data?.info?.config?.plugin['custom-vzg-validationhub']?.config['VZG-Validationhub']?.resolve_on_timeout;
+        // config: maxrecordstocheckonerror
+        config_max_records_to_check_on_error = data?.info?.config?.plugin['custom-vzg-validationhub']?.config['VZG-Validationhub']?.max_records_to_check_on_error;
 
         // if validation IS NOT ENABLED in config => return ok and save
         if (!config_enable_validation) {
@@ -337,7 +340,8 @@ process.stdin.on('end', async () => {
                     'token': config_token,
                     'frontend_language': frontend_language,
                     'objects': data.objects,
-                    'original_mask': original_mask
+                    'original_mask': original_mask,
+                    'max_records_to_check_on_error': config_max_records_to_check_on_error
                 }
                 if(config_send_l10n) {
                     dataToSend.l10n = l10nData;
@@ -371,36 +375,40 @@ process.stdin.on('end', async () => {
                                 throwErrorToFrontend("Fehler bei der Validierung des Datensatzes", "\nMelden Sie die Ticketnummer \n#" + validationResponse['request-id'] + "\nan Ihren fylr-Administrator um Hilfe zu erhalten.");
                             }
                             let validationIsFine = false;
-                            // validation fine
-                            if (validationResponse[0]) {
-                                if (validationResponse[0] == true) {
-                                    validationIsFine = true;
-                                    let originalDataString = JSON.stringify(data);
-                                    logLongString(JSON.stringify(data), () => {
-                                        process.exit(0);
-                                    });
+                            // if validation is fine
+                            let everythingTrue = true;
+                            validationResponse.forEach((validationResponseForOneObject) => {
+                                if(validationResponseForOneObject !== true) {
+                                    everythingTrue = false;
                                 }
-                            }
-                            // validation errors
-                            if (validationResponse.length > 0 && validationIsFine == false) {
-                                var errors = [];
-                                var problems = [];
-                                validationResponse.forEach((validationResponseForOneObject) => {
-                                    if (validationResponseForOneObject) {
-                                        validationResponseForOneObject.forEach((errorObject) => {
-                                            var translatedMessage = translateFieldsInMessages(errorObject.message);
-                                            errors.push(' • ' + translatedMessage + ' (\"' + errorObject.position.jsonpointer + '\")');
-                                            var pointerString = errorObject.position.jsonpointer;
-                                            pointerString = normalizePointerPath(pointerString);
-                                            problems.push({
-                                                field: pointerString,
-                                                message: translatedMessage
-                                            });
-                                        });
-                                    }
+                            });
+                            if(everythingTrue == true) {
+                                validationIsFine = true;
+                                let originalDataString = JSON.stringify(data);
+                                logLongString(JSON.stringify(data), () => {
+                                    process.exit(0);
                                 });
-                                var errorDescriptionAsText = '\n' + errors.join('\n\n');
-                                throwErrorToFrontend("Fehler in der Validierung des Datensatzes", errorDescriptionAsText, problems);
+                            } else {
+                                // validation errors
+                                let groupedErrors = [];
+                                if (validationResponse.length > 0 && validationIsFine == false) {
+                                    validationResponse.forEach((validationResponseForOneObject) => {
+                                        let errorsForOneObject = [];
+                                        if (validationResponseForOneObject && typeof validationResponseForOneObject === 'object') {
+                                            validationResponseForOneObject.forEach((errorObject) => {
+                                                var translatedMessage = translateFieldsInMessages(errorObject.message);
+                                                var pointerString = errorObject.position.jsonpointer;
+                                                pointerString = normalizePointerPath(pointerString);
+                                                errorsForOneObject.push({
+                                                    field: pointerString,
+                                                    message: translatedMessage
+                                                });
+                                            });
+                                        }
+                                        groupedErrors.push(errorsForOneObject);
+                                    });
+                                    throwErrorToFrontend("Fehler in der Validierung des Datensatzes", '', groupedErrors);
+                                }
                             }
                         }
                         return;
