@@ -236,7 +236,11 @@ process.stdin.on('end', async () => {
         
         // read frontendLanguage from object's update-user
         frontend_language = (data.objects[0] && data.objects[0]._current && data.objects[0]._current._create_user && data.objects[0]._current._create_user.user && data.objects[0]._current._create_user.user.frontend_language);
-
+        if(!frontend_language) {
+            // get frontendlanguage from api_user
+            frontend_language = (data.info && data.info.api_user && data.info.api_user.user && data.info.api_user.user.frontend_language);
+        }
+        
         /////////////////////////////////////////
         // read pluginconfig from baseconfig
 
