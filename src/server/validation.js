@@ -382,7 +382,11 @@ process.stdin.on('end', async () => {
                             // if validation is fine
                             let everythingTrue = true;
                             validationResponse.forEach((validationResponseForOneObject) => {
-                                if(validationResponseForOneObject !== true) {
+                                if (
+                                    validationResponseForOneObject !== true && 
+                                    validationResponseForOneObject !== null && 
+                                    (!Array.isArray(validationResponseForOneObject) || validationResponseForOneObject.length !== 0)
+                                ) {
                                     everythingTrue = false;
                                 }
                             });
