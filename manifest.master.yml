@@ -1,5 +1,6 @@
 plugin:
   name: custom-vzg-validationhub
+  url: https://github.com/programmfabrik/fylr-plugin-custom-vzg-validationhub
   version: 0.7
   l10n: l10n/custom-vzg-validationhub.csv
   displayname:
