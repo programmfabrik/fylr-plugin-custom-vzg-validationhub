@@ -25,3 +25,5 @@ server.config.parameter.system.VZG-Validationhub.send_l10n.checkbox,Ja,yes
 baseconfig.validation.selector.objecttype.label,Objekttyp,Objecttype
 baseconfig.validation.selector.validierung.label,Validierung,Validation
 baseconfig.validation.selector.validierung.activate.label,aktivieren,activate
+
+server.config.parameter.system.VZG-Validationhub.skip_validation_users.label,Nutzer aus der Validierung ausschließen,Users to exclude from validation

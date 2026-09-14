@@ -262,6 +262,27 @@ process.stdin.on('end', async () => {
         config_save_on_timeout = data?.info?.config?.plugin['custom-vzg-validationhub']?.config['VZG-Validationhub']?.resolve_on_timeout;
         // config: maxrecordstocheckonerror
         config_max_records_to_check_on_error = data?.info?.config?.plugin['custom-vzg-validationhub']?.config['VZG-Validationhub']?.max_records_to_check_on_error;
+        // skip validation from users
+        skip_validation_users = data?.info?.config?.plugin['custom-vzg-validationhub']?.config['VZG-Validationhub']?.skip_validation_users;
+        // read used plugin_user
+        plugin_user_id = data?.info?.api_user?.user?._id;
+
+        // check if user is in the "not validate"-config and in that caase skip validation
+        if (Array.isArray(skip_validation_users) && plugin_user_id) {     
+            const currentUserId = parseInt(plugin_user_id, 10);       
+            if (!isNaN(currentUserId) && currentUserId > 0) {
+                // read all the skip-user-ids
+                const skip_user_ids = skip_validation_users
+                            .map((u) => parseInt(u?.skip_validation_user?.user?._id, 10))
+                            .filter((id) => !isNaN(id) && id > 0);                    
+                // if plugin_user is a skip-user --> return without validation
+                if(skip_user_ids.includes(currentUserId)) {
+                    logLongString(JSON.stringify(data), () => {
+                        process.exit(0);
+                    });
+                }                    
+            }
+        }
 
         // if validation IS NOT ENABLED in config => return ok and save
         if (!config_enable_validation) {
