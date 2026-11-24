@@ -69,7 +69,7 @@ base_config:
         type: text
         position: 4
       token:
-        type: text
+        type: secret
         position: 5
       timeout:
         type: int
