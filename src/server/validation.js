@@ -267,7 +267,7 @@ process.stdin.on('end', async () => {
         // read used plugin_user
         plugin_user_id = data?.info?.api_user?.user?._id;
 
-        // check if user is in the "not validate"-config and in that caase skip validation
+        // check if user is in the "not validate"-config and in that case skip validation
         if (Array.isArray(skip_validation_users) && plugin_user_id) {     
             const currentUserId = parseInt(plugin_user_id, 10);       
             if (!isNaN(currentUserId) && currentUserId > 0) {
@@ -280,6 +280,7 @@ process.stdin.on('end', async () => {
                     logLongString(JSON.stringify(data), () => {
                         process.exit(0);
                     });
+                    return;
                 }                    
             }
         }
